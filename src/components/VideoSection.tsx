@@ -79,7 +79,7 @@ export default function VideoSection() {
 
           {/* Video wrapper */}
           <div className="relative rounded-2xl overflow-hidden bg-zinc-900/80 border border-white/5">
-            <div className="relative aspect-video min-h-[400px] sm:min-h-[520px] bg-gradient-to-br from-zinc-900 to-zinc-950">
+            <div className="relative aspect-video sm:min-h-[520px] bg-gradient-to-br from-zinc-900 to-zinc-950">
               <video
                 ref={videoRef}
                 className="w-full h-full object-cover"
@@ -102,9 +102,9 @@ export default function VideoSection() {
                   aria-label={playing ? "Pausar" : "Reproduzir"}
                 >
                   {playing ? (
-                    <><Pause className="w-4 h-4" /><span>Pausar</span></>
+                    <><Pause className="w-4 h-4" /><span className="hidden sm:inline">Pausar</span></>
                   ) : (
-                    <><Play className="w-4 h-4" /><span>Reproduzir</span></>
+                    <><Play className="w-4 h-4" /><span className="hidden sm:inline">Reproduzir</span></>
                   )}
                 </button>
 
@@ -114,9 +114,9 @@ export default function VideoSection() {
                   aria-label={muted ? "Ativar som" : "Desativar som"}
                 >
                   {muted ? (
-                    <><VolumeX className="w-4 h-4 text-zinc-400" /><span className="text-zinc-400">Som desativado</span></>
+                    <><VolumeX className="w-4 h-4 text-zinc-400" /><span className="hidden sm:inline text-zinc-400">Som desativado</span></>
                   ) : (
-                    <><Volume2 className="w-4 h-4 text-gold" /><span className="text-gold">Som ativo</span></>
+                    <><Volume2 className="w-4 h-4 text-gold" /><span className="hidden sm:inline text-gold">Som ativo</span></>
                   )}
                 </button>
               </div>
