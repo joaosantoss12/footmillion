@@ -8,8 +8,8 @@ const plans = [
   {
     id: "monthly",
     name: "1 Mês",
-    price: "29.99",
-    originalPrice: "49.99",
+    price: "19.99",
+    originalPrice: "39.99",
     period: "pagamento único",
     description: "Perfeito para experimentar",
     features: [
@@ -28,8 +28,8 @@ const plans = [
   {
     id: "quarterly",
     name: "3 Meses",
-    price: "69.99",
-    originalPrice: "149.99",
+    price: "49.99",
+    originalPrice: "109.99",
     period: "pagamento único",
     description: "O mais popular",
     badge: "⚡ MAIS POPULAR",
@@ -50,8 +50,8 @@ const plans = [
   {
     id: "yearly",
     name: "1 Ano",
-    price: "149.99",
-    originalPrice: "399.99",
+    price: "199.99",
+    originalPrice: "249.99",
     period: "pagamento único",
     description: "O melhor investimento",
     badge: "👑 MELHOR VALOR",
