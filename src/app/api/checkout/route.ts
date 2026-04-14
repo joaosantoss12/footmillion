@@ -4,17 +4,17 @@ import Stripe from "stripe";
 const PLANS: Record<string, { name: string; amount: number; telegramLink: string }> = {
   monthly: {
     name: "Footmillion VIP — 1 Mês",
-    amount: 2999,
+    amount: 1999,
     telegramLink: "https://t.me/+mgN-Uonc-g4yNjE0",
   },
   quarterly: {
     name: "Footmillion VIP — 3 Meses",
-    amount: 6999,
+    amount: 4999,
     telegramLink: "https://t.me/+BXD7gmFf9OZjNDc0",
   },
   yearly: {
     name: "Footmillion VIP — 1 Ano",
-    amount: 14999,
+    amount: 19999,
     telegramLink: "https://t.me/+yvMIUb8B01wzMTM8",
   },
 };
