@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
-});
-
 const PLANS: Record<string, { name: string; amount: number; telegramLink: string }> = {
   monthly: {
     name: "Footmillion VIP — 1 Mês",
@@ -25,6 +21,10 @@ const PLANS: Record<string, { name: string; amount: number; telegramLink: string
 
 export async function POST(req: NextRequest) {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: "2026-03-25.dahlia",
+    });
+
     const body = await req.json();
     const planId = typeof body?.planId === "string" ? body.planId : null;
 
