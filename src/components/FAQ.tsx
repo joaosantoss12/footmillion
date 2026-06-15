@@ -6,7 +6,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
-
+ 
 const faqs = [
   {
     question: "Como funciona o grupo VIP?",
