@@ -1,7 +1,3 @@
-import Maintenance from "@/components/Maintenance";
-
-// --- Landing page temporarily disabled for maintenance ---
-// To restore the live site, return <LandingPage /> instead of <Maintenance />.
 import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
 import VideoSection from "@/components/VideoSection";
@@ -11,12 +7,6 @@ import FAQ from "@/components/FAQ";
 import FinalCTA from "@/components/FinalCTA";
  
 export default function Home() {
-  return <Maintenance />;
-}
-
-// Original landing page — kept for easy restore.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function LandingPage() {
   return (
     <main className="min-h-screen bg-[#050505] overflow-x-hidden selection:bg-gold/30 selection:text-gold-light noise relative">
       <Hero />
