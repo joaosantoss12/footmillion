@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         planName: plan.name,
         telegramLink: plan.telegramLink,
       },
-      success_url: `${process.env.NEXT_PUBLIC_URL}/sucesso?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `https://joaosantos.pythonanywhere.com/join/{CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_URL}/#pricing`,
     });
 
