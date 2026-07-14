@@ -7,6 +7,9 @@ const RESEND_API = "https://api.resend.com/emails";
  * O convite é criado pelo webhook do bot, que grava a linha em `invite_links`.
  * Aqui só lemos essa linha para construir o mesmo deep link do redirect, para
  * que a entrada no grupo passe sempre pelo bot (e fique registada).
+ *
+ * O host é telegram.me (e não t.me): são equivalentes, mas há redes onde t.me
+ * não resolve em DNS.
  */
 async function getInviteTokenForSession(
   sessionId: string
@@ -122,7 +125,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invite not ready" }, { status: 500 });
     }
 
-    const botLink = `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}?start=sub_${token}`;
+    const botLink = `https://telegram.me/${process.env.TELEGRAM_BOT_USERNAME}?start=sub_${token}`;
     await sendVipEmail(email, planName, botLink);
 
     await stripe.checkout.sessions.update(session.id, {
