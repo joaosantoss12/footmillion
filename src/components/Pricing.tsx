@@ -417,12 +417,6 @@ export default function Pricing() {
           transition={{ duration: 0.8, delay: 1 }}
           className="mt-8 max-w-xl mx-auto rounded-2xl border border-white/5 bg-white/[0.02] px-6 py-5 text-center space-y-2"
         >
-          <p className="text-zinc-400 text-sm leading-relaxed">
-            <span className="text-white font-semibold">Após o pagamento</span>, serás redirecionado de volta a esta página com o link de acesso ao grupo Telegram.
-          </p>
-          <p className="text-zinc-500 text-sm leading-relaxed">
-            O recibo e fatura serão enviados automaticamente para o e-mail introduzido no checkout.
-          </p>
         </motion.div>
       </div>
     </section>
