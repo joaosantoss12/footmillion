@@ -78,7 +78,8 @@ export default function Pricing() {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
-  const [telegramLoggedIn, setTelegramLoggedIn] = useState(false);
+  const [telegramLoggedIn, setTelegramLoggedIn] = useState<boolean | null>(null);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
 
   useEffect(() => {
     fetch("/api/telegram/me")
@@ -161,18 +162,6 @@ export default function Pricing() {
                 </div>
               </div>
 
-              {!telegramLoggedIn && (
-                <div className="flex items-start gap-3 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-7">
-                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>
-                    Não iniciaste sessão com o Telegram. Depois de pagares, envia{" "}
-                    <strong>/start</strong> a{" "}
-                    <strong>@{process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}</strong> no
-                    Telegram para receberes o link do grupo.
-                  </span>
-                </div>
-              )}
-
               <button
                 onClick={() => handleCheckout(pendingPlan.id)}
                 disabled={loadingPlan !== null}
@@ -195,6 +184,36 @@ export default function Pricing() {
               </button>
               <p className="text-center text-zinc-600 text-xs mt-3">Clica fora para cancelar</p>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Not-logged-in notice */}
+      <AnimatePresence>
+        {telegramLoggedIn === false && !noticeDismissed && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: 20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: -20, x: 20 }}
+            transition={{ type: "spring", stiffness: 320, damping: 28 }}
+            className="fixed top-4 right-4 z-50 max-w-sm rounded-xl border border-amber-500/20 bg-zinc-900/95 backdrop-blur-sm p-4 shadow-2xl"
+          >
+            <button
+              onClick={() => setNoticeDismissed(true)}
+              className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              aria-label="Fechar"
+            >
+              <X className="w-3 h-3" />
+            </button>
+            <div className="flex items-start gap-3 pr-6 text-sm text-amber-300">
+              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>
+                Não iniciaste sessão com o Telegram. Se pagares assim, envia{" "}
+                <strong>/start</strong> a{" "}
+                <strong>@{process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}</strong> no
+                Telegram depois do pagamento para receberes o link do grupo.
+              </span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
