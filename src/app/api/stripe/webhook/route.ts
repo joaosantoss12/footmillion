@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { supabaseSelect, supabaseInsert, supabaseUpdate } from "@/lib/supabase";
 
 const RESEND_API = "https://api.resend.com/emails";
+
+// Mirrors config.py's PLANS in the bot repo.
+const PLAN_DAYS: Record<string, number> = {
+  monthly: 30,
+  quarterly: 90,
+  yearly: 365,
+};
 
 /**
  * O convite é criado pelo webhook do bot, que grava a linha em `invite_links`.
@@ -77,6 +85,93 @@ async function sendVipEmail(to: string, planName: string, botLink: string) {
   }
 }
 
+async function sendLoggedInVipEmail(to: string, planName: string) {
+  const res = await fetch(RESEND_API, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM,
+      to,
+      subject: "O teu acesso ao FOOTMILLION VIP 🔥",
+      html: `
+<div style="background:#050505;padding:40px 20px;font-family:Arial,Helvetica,sans-serif">
+  <div style="max-width:520px;margin:0 auto;background:#0d0d0d;border:1px solid #1f1f1f;border-radius:16px;padding:40px 32px;text-align:center">
+    <h1 style="color:#fff;font-size:26px;margin:0 0 8px">Pagamento confirmado!</h1>
+    <p style="color:#a1a1aa;font-size:14px;margin:0 0 28px">${planName}</p>
+    <p style="color:#d4d4d8;font-size:16px;line-height:1.6;margin:0 0 28px">
+      O teu acesso ao grupo VIP está a ser preparado. Volta a
+      <a href="${process.env.NEXT_PUBLIC_URL}" style="color:#d4af37">vipedrito.com</a>
+      — como já entraste com o Telegram, o link de acesso vai aparecer diretamente na página.
+    </p>
+    <a href="${process.env.NEXT_PUBLIC_URL}"
+       style="display:inline-block;background:#d4af37;color:#000;font-weight:bold;font-size:16px;text-decoration:none;padding:16px 32px;border-radius:12px">
+      Ver o meu acesso VIP
+    </a>
+  </div>
+</div>`,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Resend failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+type SubscriptionRow = { id: string; expires_at: string; invite_link_id: string | null };
+
+/**
+ * Writes the paid-for subscription so the site can show "access ready" on a
+ * later visit. `invite_link_id` is left null here — the bot fills it in once
+ * it generates the personal invite link for this telegram_user_id.
+ */
+async function upsertTelegramSubscription(
+  telegramUserId: string,
+  telegramUsername: string | undefined,
+  telegramName: string,
+  planId: string
+) {
+  const days = PLAN_DAYS[planId];
+  if (!days) throw new Error(`Unknown planId for subscription upsert: ${planId}`);
+
+  const existing = await supabaseSelect<SubscriptionRow>("subscriptions", {
+    telegram_user_id: `eq.${telegramUserId}`,
+    active: "eq.true",
+    select: "id,expires_at,invite_link_id",
+    order: "expires_at.desc",
+    limit: "1",
+  });
+
+  const now = new Date();
+  const current = existing[0];
+
+  if (current) {
+    const base = new Date(
+      Math.max(new Date(current.expires_at).getTime(), now.getTime())
+    );
+    const expiresAt = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+    await supabaseUpdate(
+      "subscriptions",
+      { id: `eq.${current.id}` },
+      { plan: planId, expires_at: expiresAt.toISOString(), renewal_notified_at: null }
+    );
+    return;
+  }
+
+  const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+  await supabaseInsert("subscriptions", {
+    telegram_user_id: Number(telegramUserId),
+    telegram_username: telegramUsername ?? null,
+    telegram_name: telegramName,
+    plan: planId,
+    expires_at: expiresAt.toISOString(),
+    invite_link_id: null,
+    active: true,
+  });
+}
+
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2026-03-25.dahlia",
@@ -114,6 +209,31 @@ export async function POST(req: NextRequest) {
   if (!email) {
     console.error(`No email on session ${session.id}`);
     return NextResponse.json({ received: true, skipped: "no email" });
+  }
+
+  const telegramUserId = session.metadata?.telegram_user_id;
+  const planId = session.metadata?.planId;
+
+  if (telegramUserId && planId) {
+    try {
+      await upsertTelegramSubscription(
+        telegramUserId,
+        session.metadata?.telegram_username,
+        session.metadata?.telegram_name ?? "",
+        planId
+      );
+      await sendLoggedInVipEmail(email, planName);
+
+      await stripe.checkout.sessions.update(session.id, {
+        metadata: { ...session.metadata, vipEmailSent: "true" },
+      });
+
+      console.log(`Subscription upserted + email sent to ${email} (${planName}) — telegram_user_id ${telegramUserId}`);
+      return NextResponse.json({ received: true });
+    } catch (err) {
+      console.error("Failed to record telegram-linked subscription:", err);
+      return NextResponse.json({ error: "Subscription upsert failed" }, { status: 500 });
+    }
   }
 
   try {

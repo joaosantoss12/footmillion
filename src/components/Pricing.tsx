@@ -1,8 +1,9 @@
 "use client";
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
-import { useRef, useState } from "react";
-import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle } from "lucide-react";
+import TelegramGate from "./TelegramGate";
 
 const plans = [
   {
@@ -77,6 +78,14 @@ export default function Pricing() {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
+  const [telegramLoggedIn, setTelegramLoggedIn] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/telegram/me")
+      .then((res) => res.json())
+      .then((data) => setTelegramLoggedIn(Boolean(data.loggedIn)))
+      .catch(() => setTelegramLoggedIn(false));
+  }, []);
 
   async function handleCheckout(planId: string) {
     setLoadingPlan(planId);
@@ -152,6 +161,18 @@ export default function Pricing() {
                 </div>
               </div>
 
+              {!telegramLoggedIn && (
+                <div className="flex items-start gap-3 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-7">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    Não iniciaste sessão com o Telegram. Depois de pagares, envia{" "}
+                    <strong>/start</strong> a{" "}
+                    <strong>@{process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}</strong> no
+                    Telegram para receberes o link do grupo.
+                  </span>
+                </div>
+              )}
+
               <button
                 onClick={() => handleCheckout(pendingPlan.id)}
                 disabled={loadingPlan !== null}
@@ -201,6 +222,8 @@ export default function Pricing() {
             Escolhe o período que mais te convém.
           </p>
         </motion.div>
+
+        <TelegramGate />
 
         {/* Pricing cards */}
         <motion.div

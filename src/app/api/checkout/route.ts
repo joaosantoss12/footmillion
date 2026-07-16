@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { verifySession, SESSION_COOKIE } from "@/lib/session";
 
 const PLANS: Record<string, { name: string; amount: number; telegramLink: string }> = {
   monthly: {
@@ -34,6 +35,26 @@ export async function POST(req: NextRequest) {
 
     const plan = PLANS[planId];
 
+    const tgSession = verifySession(req.cookies.get(SESSION_COOKIE)?.value);
+
+    const metadata: Record<string, string> = {
+      planId,
+      planName: plan.name,
+      telegramLink: plan.telegramLink,
+    };
+    if (tgSession) {
+      metadata.telegram_user_id = String(tgSession.id);
+      if (tgSession.username) metadata.telegram_username = tgSession.username;
+      metadata.telegram_name = tgSession.first_name;
+    }
+
+    // Logged-in buyers return to the homepage, which shows their invite link
+    // once ready. Without a known telegram_user_id we fall back to the bot's
+    // /join deep-link flow, exactly as before.
+    const successUrl = tgSession
+      ? `${process.env.NEXT_PUBLIC_URL}/?paid=1`
+      : `https://joaosantos.pythonanywhere.com/join/{CHECKOUT_SESSION_ID}`;
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card", "mb_way", "multibanco", "klarna"],
@@ -48,12 +69,8 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      metadata: {
-        planId,
-        planName: plan.name,
-        telegramLink: plan.telegramLink,
-      },
-      success_url: `https://joaosantos.pythonanywhere.com/join/{CHECKOUT_SESSION_ID}`,
+      metadata,
+      success_url: successUrl,
       cancel_url: `${process.env.NEXT_PUBLIC_URL}/#pricing`,
     });
 
