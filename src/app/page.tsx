@@ -5,7 +5,7 @@ import Testimonials from "@/components/Testimonials";
 import Pricing from "@/components/Pricing";
 import FAQ from "@/components/FAQ";
 import FinalCTA from "@/components/FinalCTA";
- 
+  
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#050505] overflow-x-hidden selection:bg-gold/30 selection:text-gold-light noise relative">
