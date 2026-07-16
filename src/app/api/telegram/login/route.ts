@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyTelegramAuth } from "@/lib/telegramAuth";
+import { verifyTelegramIdToken } from "@/lib/telegramAuth";
 import { signSession, SESSION_COOKIE } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") {
+  const idToken = body && typeof body.id_token === "string" ? body.id_token : null;
+  if (!idToken) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 });
   }
 
-  const auth = verifyTelegramAuth(body, process.env.TELEGRAM_BOT_TOKEN!);
+  const auth = await verifyTelegramIdToken(idToken, process.env.TELEGRAM_CLIENT_ID!);
   if (!auth) {
     return NextResponse.json({ error: "Autenticação inválida" }, { status: 401 });
   }

@@ -1,57 +1,44 @@
-import { createHash, createHmac, timingSafeEqual } from "crypto";
+import { jwtVerify, createRemoteJWKSet } from "jose";
 
-export type TelegramAuthPayload = {
+export type TelegramIdTokenUser = {
   id: number;
-  first_name: string;
-  last_name?: string;
   username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
+  first_name: string;
 };
 
-const MAX_AUTH_AGE_SECONDS = 24 * 60 * 60;
+const JWKS = createRemoteJWKSet(
+  new URL("https://oauth.telegram.org/.well-known/jwks.json")
+);
 
 /**
- * https://core.telegram.org/widgets/login#checking-authorization
- * secret = SHA256(bot_token); hash = HMAC-SHA256(data_check_string, secret).
+ * https://core.telegram.org/widgets/login — OIDC flow (telegram-login.js).
+ * Verifies the id_token's signature against Telegram's JWKS, and that it
+ * was issued for our bot (aud = client_id).
  */
-export function verifyTelegramAuth(
-  payload: Record<string, unknown>,
-  botToken: string
-): TelegramAuthPayload | null {
-  const { hash, ...rest } = payload;
-  if (typeof hash !== "string") return null;
+export async function verifyTelegramIdToken(
+  idToken: string,
+  clientId: string
+): Promise<TelegramIdTokenUser | null> {
+  try {
+    const { payload } = await jwtVerify(idToken, JWKS, {
+      issuer: "https://oauth.telegram.org",
+      audience: clientId,
+    });
 
-  const dataCheckString = Object.keys(rest)
-    .filter((key) => rest[key] !== undefined && rest[key] !== null)
-    .sort()
-    .map((key) => `${key}=${rest[key]}`)
-    .join("\n");
+    const id = Number(payload.sub ?? payload.id);
+    if (!Number.isFinite(id)) return null;
 
-  const secret = createHash("sha256").update(botToken).digest();
-  const computedHash = createHmac("sha256", secret)
-    .update(dataCheckString)
-    .digest("hex");
+    const username =
+      typeof payload.preferred_username === "string"
+        ? payload.preferred_username
+        : undefined;
+    const firstName =
+      (typeof payload.given_name === "string" && payload.given_name) ||
+      (typeof payload.name === "string" && payload.name) ||
+      "Telegram";
 
-  const a = Buffer.from(computedHash, "hex");
-  const b = Buffer.from(hash, "hex");
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-
-  const authDate = Number(rest.auth_date);
-  if (!Number.isFinite(authDate)) return null;
-  if (Date.now() / 1000 - authDate > MAX_AUTH_AGE_SECONDS) return null;
-
-  const id = Number(rest.id);
-  if (!Number.isFinite(id)) return null;
-
-  return {
-    id,
-    first_name: String(rest.first_name ?? ""),
-    last_name: rest.last_name ? String(rest.last_name) : undefined,
-    username: rest.username ? String(rest.username) : undefined,
-    photo_url: rest.photo_url ? String(rest.photo_url) : undefined,
-    auth_date: authDate,
-    hash,
-  };
+    return { id, username, first_name: firstName };
+  } catch {
+    return null;
+  }
 }

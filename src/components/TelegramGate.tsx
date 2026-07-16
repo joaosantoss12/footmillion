@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Script from "next/script";
 import { motion } from "framer-motion";
 import { ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
 
@@ -11,19 +12,15 @@ type Status =
   | { kind: "pending"; plan: string; expiresAt: string }
   | { kind: "ready"; plan: string; expiresAt: string; telegramLink: string };
 
-type TelegramAuthUser = {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
+type TelegramAuthData = {
+  id_token?: string;
+  user?: { preferred_username?: string; given_name?: string };
+  error?: string;
 };
 
 declare global {
   interface Window {
-    onTelegramAuth?: (user: TelegramAuthUser) => void;
+    onTelegramAuth?: (data: TelegramAuthData) => void;
   }
 }
 
@@ -36,7 +33,6 @@ const PLAN_LABELS: Record<string, string> = {
 export default function TelegramGate() {
   const [status, setStatus] = useState<Status>({ kind: "loading" });
   const [username, setUsername] = useState<string | null>(null);
-  const widgetRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(async () => {
@@ -65,35 +61,20 @@ export default function TelegramGate() {
     }
   }, [status.kind, refresh]);
 
-  // Mount the Telegram Login Widget only when there's something to gain from it.
+  // Registers the callback the telegram-login.js embed calls on auth.
   useEffect(() => {
     if (status.kind !== "logged_out" && status.kind !== "none") return;
-    if (!widgetRef.current) return;
 
-    window.onTelegramAuth = async (user: TelegramAuthUser) => {
+    window.onTelegramAuth = async (data: TelegramAuthData) => {
+      if (!data.id_token) return;
       await fetch("/api/telegram/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user),
+        body: JSON.stringify({ id_token: data.id_token }),
       });
       refresh();
     };
-
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute(
-      "data-telegram-login",
-      process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? ""
-    );
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "12");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    script.setAttribute("data-request-access", "write");
-
-    widgetRef.current.innerHTML = "";
-    widgetRef.current.appendChild(script);
-  }, [status.kind]);
+  }, [status.kind, refresh]);
 
   if (status.kind === "loading") return null;
 
@@ -160,7 +141,18 @@ export default function TelegramGate() {
             Faz login antes de pagar e o link de acesso ao grupo aparece diretamente
             aqui, sem precisares de abrir o Telegram.
           </p>
-          <div ref={widgetRef} className="flex justify-center" />
+          <Script
+            src="https://oauth.telegram.org/js/telegram-login.js?5"
+            strategy="afterInteractive"
+            data-client-id={process.env.NEXT_PUBLIC_TELEGRAM_CLIENT_ID}
+            data-onauth="onTelegramAuth(data)"
+            data-request-access="write"
+          />
+          <div className="flex justify-center">
+            <button className="tg-auth-button" data-style="shine">
+              Entrar com Telegram
+            </button>
+          </div>
         </>
       )}
     </motion.div>

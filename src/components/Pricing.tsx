@@ -302,8 +302,8 @@ export default function Pricing() {
                 {/* Icon */}
                 <div
                   className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${plan.popular
-                      ? "bg-gold/20 text-gold"
-                      : "bg-white/5 text-zinc-400"
+                    ? "bg-gold/20 text-gold"
+                    : "bg-white/5 text-zinc-400"
                     }`}
                 >
                   <plan.icon className="w-6 h-6" />
@@ -357,8 +357,8 @@ export default function Pricing() {
                   onClick={() => setPendingPlanId(plan.id)}
                   disabled={loadingPlan !== null}
                   className={`w-full py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-wait ${plan.popular
-                      ? "bg-gradient-to-r from-gold to-gold-light text-black hover:opacity-90 shadow-lg shadow-gold/20"
-                      : "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20"
+                    ? "bg-gradient-to-r from-gold to-gold-light text-black hover:opacity-90 shadow-lg shadow-gold/20"
+                    : "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20"
                     }`}
                 >
                   {loadingPlan === plan.id ? (
