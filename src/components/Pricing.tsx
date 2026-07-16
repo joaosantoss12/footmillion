@@ -2,7 +2,7 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle } from "lucide-react";
+import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Copy, CopyCheck, Send } from "lucide-react";
 import TelegramGate from "./TelegramGate";
 
 const plans = [
@@ -80,6 +80,15 @@ export default function Pricing() {
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
   const [telegramLoggedIn, setTelegramLoggedIn] = useState<boolean | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const [botUsernameCopied, setBotUsernameCopied] = useState(false);
+
+  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
+
+  async function copyBotUsername() {
+    await navigator.clipboard.writeText(`@${botUsername}`);
+    setBotUsernameCopied(true);
+    setTimeout(() => setBotUsernameCopied(false), 2000);
+  }
 
   useEffect(() => {
     fetch("/api/telegram/me")
@@ -151,17 +160,6 @@ export default function Pricing() {
               <h3 className="text-xl font-bold text-white mb-1">{pendingPlan.name}</h3>
               <p className="text-3xl font-black text-white mb-6">€{pendingPlan.price}</p>
 
-              <div className="space-y-3 mb-7">
-                <div className="flex items-start gap-3 text-sm text-zinc-300">
-                  <Link className="w-4 h-4 mt-0.5 flex-shrink-0 text-gold" />
-                  <span>Após o pagamento, serás redirecionado de volta a esta página com o link de acesso ao grupo Telegram.</span>
-                </div>
-                <div className="flex items-start gap-3 text-sm text-zinc-300">
-                  <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-gold" />
-                  <span>O recibo e fatura serão enviados automaticamente para o e-mail introduzido no checkout.</span>
-                </div>
-              </div>
-
               <button
                 onClick={() => handleCheckout(pendingPlan.id)}
                 disabled={loadingPlan !== null}
@@ -210,10 +208,37 @@ export default function Pricing() {
               <span>
                 Não iniciaste sessão com o Telegram. Se pagares assim, envia{" "}
                 <strong>/start</strong> a{" "}
-                <strong>@{process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}</strong> no
+                <strong>@{botUsername}</strong> no
                 Telegram depois do pagamento para receberes o link do grupo.
               </span>
             </div>
+            <div className="flex items-center gap-2 mt-3 pl-7">
+              <button
+                onClick={copyBotUsername}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                {botUsernameCopied ? (
+                  <>
+                    <CopyCheck className="w-3.5 h-3.5" />
+                    Copiado
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    Copiar @{botUsername}
+                  </>
+                )}
+              </button>
+            </div>
+            <a
+              href={`https://t.me/${botUsername}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 ml-7 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs font-medium text-amber-300 hover:bg-amber-500/20 transition-colors"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Abrir chat com o bot
+            </a>
           </motion.div>
         )}
       </AnimatePresence>
@@ -276,11 +301,10 @@ export default function Pricing() {
 
                 {/* Icon */}
                 <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${
-                    plan.popular
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${plan.popular
                       ? "bg-gold/20 text-gold"
                       : "bg-white/5 text-zinc-400"
-                  }`}
+                    }`}
                 >
                   <plan.icon className="w-6 h-6" />
                 </div>
@@ -306,8 +330,8 @@ export default function Pricing() {
                       {Math.round(
                         (1 -
                           parseFloat(plan.price) /
-                            parseFloat(plan.originalPrice)) *
-                          100
+                          parseFloat(plan.originalPrice)) *
+                        100
                       )}
                       % OFF
                     </span>
@@ -320,9 +344,8 @@ export default function Pricing() {
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
                       <Check
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                          plan.popular ? "text-gold" : "text-green-accent"
-                        }`}
+                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-gold" : "text-green-accent"
+                          }`}
                       />
                       <span className="text-zinc-300 text-sm">{feature}</span>
                     </li>
@@ -333,11 +356,10 @@ export default function Pricing() {
                 <button
                   onClick={() => setPendingPlanId(plan.id)}
                   disabled={loadingPlan !== null}
-                  className={`w-full py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-wait ${
-                    plan.popular
+                  className={`w-full py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-wait ${plan.popular
                       ? "bg-gradient-to-r from-gold to-gold-light text-black hover:opacity-90 shadow-lg shadow-gold/20"
                       : "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20"
-                  }`}
+                    }`}
                 >
                   {loadingPlan === plan.id ? (
                     <>
