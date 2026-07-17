@@ -62,9 +62,9 @@ export default function TelegramGate() {
   }, [status.kind, refresh]);
 
   // Registers the callback the telegram-login.js embed calls on auth.
+  // Must be defined unconditionally (the library evals `onTelegramAuth(data)`
+  // in global scope), otherwise we get "onTelegramAuth is not defined".
   useEffect(() => {
-    if (status.kind !== "logged_out" && status.kind !== "none") return;
-
     window.onTelegramAuth = async (data: TelegramAuthData) => {
       console.log("onTelegramAuth data:", data);
       if (!data.id_token) {
@@ -85,7 +85,7 @@ export default function TelegramGate() {
       refresh();
       window.dispatchEvent(new Event("tg-auth"));
     };
-  }, [status.kind, refresh]);
+  }, [refresh]);
 
   if (status.kind === "loading") return null;
 
