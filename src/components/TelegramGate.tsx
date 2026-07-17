@@ -18,6 +18,12 @@ type TelegramAuthData = {
   error?: string;
 };
 
+type SessionUser = {
+  username?: string;
+  first_name: string;
+  photo_url?: string;
+};
+
 declare global {
   interface Window {
     onTelegramAuth?: (data: TelegramAuthData) => void;
@@ -32,7 +38,7 @@ const PLAN_LABELS: Record<string, string> = {
 
 export default function TelegramGate() {
   const [status, setStatus] = useState<Status>({ kind: "loading" });
-  const [username, setUsername] = useState<string | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(async () => {
@@ -43,7 +49,7 @@ export default function TelegramGate() {
     const me = await meRes.json();
     const sub = await statusRes.json();
 
-    setUsername(me.loggedIn ? me.user.username ?? me.user.first_name : null);
+    setUser(me.loggedIn ? me.user : null);
     setStatus(sub);
   }, []);
 
@@ -141,10 +147,23 @@ export default function TelegramGate() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-xl mx-auto mb-12 rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center"
     >
-      {username ? (
-        <p className="text-zinc-400 text-sm">
-          Sessão iniciada como <span className="text-white font-semibold">@{username}</span>
-        </p>
+      {user ? (
+        <div className="flex items-center justify-center gap-3">
+          {user.photo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.photo_url}
+              alt={user.first_name}
+              className="w-11 h-11 rounded-full object-cover border border-white/10"
+            />
+          )}
+          <div className="text-left">
+            <p className="text-white font-semibold leading-tight">{user.first_name}</p>
+            {user.username && (
+              <p className="text-zinc-400 text-sm leading-tight">@{user.username}</p>
+            )}
+          </div>
+        </div>
       ) : (
         <>
           <h3 className="text-lg font-bold text-white mb-2">Entra com o Telegram</h3>

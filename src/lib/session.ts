@@ -4,6 +4,7 @@ export type TelegramSession = {
   id: number;
   username?: string;
   first_name: string;
+  photo_url?: string;
 };
 
 export const SESSION_COOKIE = "tg_session";

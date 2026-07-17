@@ -14,7 +14,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Autenticação inválida" }, { status: 401 });
   }
 
-  const session = { id: auth.id, username: auth.username, first_name: auth.first_name };
+  const session = {
+    id: auth.id,
+    username: auth.username,
+    first_name: auth.first_name,
+    photo_url: auth.photo_url,
+  };
   const res = NextResponse.json({ ok: true, user: session });
   res.cookies.set(SESSION_COOKIE, signSession(session), {
     httpOnly: true,

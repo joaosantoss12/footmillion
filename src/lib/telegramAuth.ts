@@ -4,6 +4,7 @@ export type TelegramIdTokenUser = {
   id: number;
   username?: string;
   first_name: string;
+  photo_url?: string;
 };
 
 const JWKS = createRemoteJWKSet(
@@ -33,7 +34,9 @@ export async function verifyTelegramIdToken(
       return null;
     }
 
-    const id = Number(payload.sub ?? payload.id);
+    // `id` is the real Telegram user id. `sub` is the OIDC subject — a
+    // different, much larger number that overflows a JS/Postgres bigint.
+    const id = Number(payload.id ?? payload.sub);
     if (!Number.isFinite(id)) return null;
 
     const username =
@@ -44,8 +47,10 @@ export async function verifyTelegramIdToken(
       (typeof payload.given_name === "string" && payload.given_name) ||
       (typeof payload.name === "string" && payload.name) ||
       "Telegram";
+    const photoUrl =
+      typeof payload.picture === "string" ? payload.picture : undefined;
 
-    return { id, username, first_name: firstName };
+    return { id, username, first_name: firstName, photo_url: photoUrl };
   } catch (err) {
     console.error("Telegram id_token verification failed:", err);
     return null;
