@@ -5,6 +5,12 @@ import { useRef, useState, useEffect } from "react";
 import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Send } from "lucide-react";
 import TelegramGate from "./TelegramGate";
 
+type TelegramUser = {
+  username?: string;
+  first_name: string;
+  photo_url?: string;
+};
+
 const plans = [
   {
     id: "monthly",
@@ -78,16 +84,20 @@ export default function Pricing() {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
-  const [telegramLoggedIn, setTelegramLoggedIn] = useState<boolean | null>(null);
+  const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
+  const [telegramLoaded, setTelegramLoaded] = useState(false);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+
+  const telegramLoggedIn = telegramLoaded ? telegramUser !== null : null;
 
   const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
 
   const refreshTelegramLoggedIn = () => {
     fetch("/api/telegram/me")
       .then((res) => res.json())
-      .then((data) => setTelegramLoggedIn(Boolean(data.loggedIn)))
-      .catch(() => setTelegramLoggedIn(false));
+      .then((data) => setTelegramUser(data.loggedIn ? data.user : null))
+      .catch(() => setTelegramUser(null))
+      .finally(() => setTelegramLoaded(true));
   };
 
   useEffect(() => {
@@ -170,6 +180,26 @@ export default function Pricing() {
                 </div>
               )}
 
+              {telegramLoggedIn === true && telegramUser && (
+                <div className="flex items-center gap-3 mb-5 pb-5 border-b border-white/10">
+                  {telegramUser.photo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={telegramUser.photo_url}
+                      alt={telegramUser.first_name}
+                      referrerPolicy="no-referrer"
+                      className="w-9 h-9 rounded-full object-cover border border-white/10 flex-shrink-0"
+                    />
+                  )}
+                  <p className="text-sm text-zinc-300 min-w-0 truncate">
+                    Sessão iniciada como{" "}
+                    <span className="text-white font-semibold">
+                      @{telegramUser.username ?? telegramUser.first_name}
+                    </span>
+                  </p>
+                </div>
+              )}
+
               <button
                 onClick={() => handleCheckout(pendingPlan.id)}
                 disabled={loadingPlan !== null}
@@ -196,8 +226,47 @@ export default function Pricing() {
         )}
       </AnimatePresence>
 
-      {/* Not-logged-in notice */}
+      {/* Telegram notice — profile when logged in, warning otherwise */}
       <AnimatePresence>
+        {telegramLoggedIn === true && telegramUser && !noticeDismissed && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: 20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: -20, x: 20 }}
+            transition={{ type: "spring", stiffness: 320, damping: 28 }}
+            className="fixed top-4 right-4 z-50 max-w-sm rounded-xl border border-green-accent/20 bg-zinc-900/95 backdrop-blur-sm p-4 shadow-2xl"
+          >
+            <button
+              onClick={() => setNoticeDismissed(true)}
+              className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              aria-label="Fechar"
+            >
+              <X className="w-3 h-3" />
+            </button>
+            <div className="flex items-center gap-3 pr-6">
+              {telegramUser.photo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={telegramUser.photo_url}
+                  alt={telegramUser.first_name}
+                  referrerPolicy="no-referrer"
+                  className="w-11 h-11 rounded-full object-cover border border-white/10 flex-shrink-0"
+                />
+              )}
+              <div className="min-w-0">
+                <p className="text-xs text-green-accent mb-0.5">Sessão iniciada</p>
+                <p className="text-white font-semibold leading-tight truncate">
+                  {telegramUser.first_name}
+                </p>
+                {telegramUser.username && (
+                  <p className="text-zinc-400 text-sm leading-tight truncate">
+                    @{telegramUser.username}
+                  </p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
         {telegramLoggedIn === false && !noticeDismissed && (
           <motion.div
             initial={{ opacity: 0, y: -20, x: 20 }}

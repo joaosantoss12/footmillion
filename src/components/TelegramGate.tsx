@@ -154,6 +154,7 @@ export default function TelegramGate() {
             <img
               src={user.photo_url}
               alt={user.first_name}
+              referrerPolicy="no-referrer"
               className="w-11 h-11 rounded-full object-cover border border-white/10"
             />
           )}
