@@ -300,8 +300,8 @@ export default function Pricing() {
             <div className="flex items-start gap-3 pr-6 text-sm text-amber-300">
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>
-                Não iniciaste sessão com o Telegram. Se pagares assim, envia{" "}
-                <strong>/start</strong> a{" "}
+                Inicia sessão com o Telegram para receber aqui o link.<br></br>Se pagares sem login, envia{" "}
+                <strong>/start</strong> para{" "}
                 <strong>@{botUsername}</strong> no
                 Telegram depois do pagamento para receberes o link do grupo.
               </span>
