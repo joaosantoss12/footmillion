@@ -73,6 +73,7 @@ export default function TelegramGate() {
         body: JSON.stringify({ id_token: data.id_token }),
       });
       refresh();
+      window.dispatchEvent(new Event("tg-auth"));
     };
   }, [status.kind, refresh]);
 

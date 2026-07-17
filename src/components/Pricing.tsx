@@ -2,7 +2,7 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Copy, CopyCheck, Send } from "lucide-react";
+import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Send } from "lucide-react";
 import TelegramGate from "./TelegramGate";
 
 const plans = [
@@ -80,21 +80,20 @@ export default function Pricing() {
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
   const [telegramLoggedIn, setTelegramLoggedIn] = useState<boolean | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
-  const [botUsernameCopied, setBotUsernameCopied] = useState(false);
 
   const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
 
-  async function copyBotUsername() {
-    await navigator.clipboard.writeText(`@${botUsername}`);
-    setBotUsernameCopied(true);
-    setTimeout(() => setBotUsernameCopied(false), 2000);
-  }
-
-  useEffect(() => {
+  const refreshTelegramLoggedIn = () => {
     fetch("/api/telegram/me")
       .then((res) => res.json())
       .then((data) => setTelegramLoggedIn(Boolean(data.loggedIn)))
       .catch(() => setTelegramLoggedIn(false));
+  };
+
+  useEffect(() => {
+    refreshTelegramLoggedIn();
+    window.addEventListener("tg-auth", refreshTelegramLoggedIn);
+    return () => window.removeEventListener("tg-auth", refreshTelegramLoggedIn);
   }, []);
 
   async function handleCheckout(planId: string) {
@@ -160,6 +159,17 @@ export default function Pricing() {
               <h3 className="text-xl font-bold text-white mb-1">{pendingPlan.name}</h3>
               <p className="text-3xl font-black text-white mb-6">€{pendingPlan.price}</p>
 
+              {telegramLoggedIn === false && (
+                <div className="flex flex-col items-center gap-2 mb-5 pb-5 border-b border-white/10">
+                  <p className="text-xs text-zinc-400">
+                    Entra com o Telegram para receberes o link diretamente aqui após o pagamento
+                  </p>
+                  <button className="tg-auth-button" data-style="shine">
+                    Entrar com Telegram
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={() => handleCheckout(pendingPlan.id)}
                 disabled={loadingPlan !== null}
@@ -212,22 +222,9 @@ export default function Pricing() {
                 Telegram depois do pagamento para receberes o link do grupo.
               </span>
             </div>
-            <div className="flex items-center gap-2 mt-3 pl-7">
-              <button
-                onClick={copyBotUsername}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                {botUsernameCopied ? (
-                  <>
-                    <CopyCheck className="w-3.5 h-3.5" />
-                    Copiado
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    Copiar @{botUsername}
-                  </>
-                )}
+            <div className="flex items-center justify-center mt-3 pl-7">
+              <button className="tg-auth-button" data-style="shine">
+                Entrar com Telegram
               </button>
             </div>
             <a
