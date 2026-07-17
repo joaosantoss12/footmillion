@@ -223,7 +223,7 @@ export default function Pricing() {
               </span>
             </div>
             <div className="flex items-center justify-center mt-3 pl-7">
-              <button className="tg-auth-button" data-style="shine">
+              <button className="tg-auth-button" data-style="square">
                 Entrar com Telegram
               </button>
             </div>
