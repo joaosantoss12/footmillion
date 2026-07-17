@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Script from "next/script";
 import { motion } from "framer-motion";
-import { ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
+import { ExternalLink, Loader2, CheckCircle2, LogOut } from "lucide-react";
 
 type Status =
   | { kind: "loading" }
@@ -53,8 +53,17 @@ export default function TelegramGate() {
     setStatus(sub);
   }, []);
 
+  const logout = useCallback(async () => {
+    await fetch("/api/telegram/logout", { method: "POST" });
+    refresh();
+    window.dispatchEvent(new Event("tg-auth"));
+  }, [refresh]);
+
   useEffect(() => {
     refresh();
+    // Sync when login/logout happens in another component on the page.
+    window.addEventListener("tg-auth", refresh);
+    return () => window.removeEventListener("tg-auth", refresh);
   }, [refresh]);
 
   // Poll while we're waiting for the bot to generate the invite link.
@@ -164,6 +173,14 @@ export default function TelegramGate() {
               <p className="text-zinc-400 text-sm leading-tight">@{user.username}</p>
             )}
           </div>
+          <button
+            onClick={logout}
+            className="ml-1 w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            aria-label="Terminar sessão"
+            title="Terminar sessão"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       ) : (
         <>

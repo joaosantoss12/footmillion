@@ -2,7 +2,7 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Send } from "lucide-react";
+import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Send, LogOut } from "lucide-react";
 import TelegramGate from "./TelegramGate";
 
 type TelegramUser = {
@@ -106,6 +106,12 @@ export default function Pricing() {
     return () => window.removeEventListener("tg-auth", refreshTelegramLoggedIn);
   }, []);
 
+  async function handleLogout() {
+    await fetch("/api/telegram/logout", { method: "POST" });
+    setTelegramUser(null);
+    window.dispatchEvent(new Event("tg-auth"));
+  }
+
   async function handleCheckout(planId: string) {
     setLoadingPlan(planId);
     setPendingPlanId(null);
@@ -197,6 +203,14 @@ export default function Pricing() {
                       @{telegramUser.username ?? telegramUser.first_name}
                     </span>
                   </p>
+                  <button
+                    onClick={handleLogout}
+                    className="ml-auto w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
+                    aria-label="Terminar sessão"
+                    title="Terminar sessão"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
@@ -236,14 +250,7 @@ export default function Pricing() {
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
             className="fixed top-4 right-4 z-50 max-w-sm rounded-xl border border-green-accent/20 bg-zinc-900/95 backdrop-blur-sm p-4 shadow-2xl"
           >
-            <button
-              onClick={() => setNoticeDismissed(true)}
-              className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              aria-label="Fechar"
-            >
-              <X className="w-3 h-3" />
-            </button>
-            <div className="flex items-center gap-3 pr-6">
+            <div className="flex items-center gap-3">
               {telegramUser.photo_url && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -264,6 +271,14 @@ export default function Pricing() {
                   </p>
                 )}
               </div>
+              <button
+                onClick={handleLogout}
+                className="ml-1 w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
+                aria-label="Terminar sessão"
+                title="Terminar sessão"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </motion.div>
         )}
