@@ -66,12 +66,22 @@ export default function TelegramGate() {
     if (status.kind !== "logged_out" && status.kind !== "none") return;
 
     window.onTelegramAuth = async (data: TelegramAuthData) => {
-      if (!data.id_token) return;
-      await fetch("/api/telegram/login", {
+      console.log("onTelegramAuth data:", data);
+      if (!data.id_token) {
+        alert("Login sem id_token. data.error: " + (data.error ?? "(nenhum)"));
+        return;
+      }
+      const res = await fetch("/api/telegram/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_token: data.id_token }),
       });
+      if (!res.ok) {
+        const body = await res.text();
+        console.error("login failed", res.status, body);
+        alert("Login falhou (" + res.status + "): " + body);
+        return;
+      }
       refresh();
       window.dispatchEvent(new Event("tg-auth"));
     };
