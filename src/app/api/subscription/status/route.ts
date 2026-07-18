@@ -14,7 +14,7 @@ type InviteLink = { link: string };
 export async function GET(req: NextRequest) {
   const session = verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return NextResponse.json({ status: "logged_out" });
+    return NextResponse.json({ kind: "logged_out" });
   }
 
   try {
@@ -28,12 +28,12 @@ export async function GET(req: NextRequest) {
 
     const sub = subs[0];
     if (!sub) {
-      return NextResponse.json({ status: "none" });
+      return NextResponse.json({ kind: "none" });
     }
 
     if (!sub.invite_link_id) {
       return NextResponse.json({
-        status: "pending",
+        kind: "pending",
         plan: sub.plan,
         expiresAt: sub.expires_at,
       });
@@ -47,20 +47,20 @@ export async function GET(req: NextRequest) {
     const link = links[0]?.link;
     if (!link) {
       return NextResponse.json({
-        status: "pending",
+        kind: "pending",
         plan: sub.plan,
         expiresAt: sub.expires_at,
       });
     }
 
     return NextResponse.json({
-      status: "ready",
+      kind: "ready",
       plan: sub.plan,
       expiresAt: sub.expires_at,
       telegramLink: link,
     });
   } catch (err) {
     console.error("subscription/status failed:", err);
-    return NextResponse.json({ status: "none" }, { status: 200 });
+    return NextResponse.json({ kind: "none" }, { status: 200 });
   }
 }
