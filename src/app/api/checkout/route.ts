@@ -55,8 +55,15 @@ export async function POST(req: NextRequest) {
     };
     if (tgSession.username) metadata.telegram_username = tgSession.username;
 
-    // Always return to the homepage, which shows their invite link once ready.
-    const successUrl = `${process.env.NEXT_PUBLIC_URL}/?paid=1`;
+    // Redirect back to whatever origin the buyer is actually on, so a
+    // misconfigured NEXT_PUBLIC_URL can never send them to localhost. The
+    // browser's Origin header is the page origin for this same-site fetch;
+    // fall back to the request origin, then the env var.
+    const origin =
+      req.headers.get("origin") ||
+      req.nextUrl.origin ||
+      process.env.NEXT_PUBLIC_URL ||
+      "";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -73,8 +80,8 @@ export async function POST(req: NextRequest) {
         },
       ],
       metadata,
-      success_url: successUrl,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL}/#pricing`,
+      success_url: `${origin}/?paid=1`,
+      cancel_url: `${origin}/#pricing`,
     });
 
     return NextResponse.json({ url: session.url });
