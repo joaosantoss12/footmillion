@@ -2,7 +2,7 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Send, LogOut } from "lucide-react";
+import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Send, LogOut, ExternalLink } from "lucide-react";
 import TelegramGate from "./TelegramGate";
 
 type TelegramUser = {
@@ -87,6 +87,7 @@ export default function Pricing() {
   const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
   const [telegramLoaded, setTelegramLoaded] = useState(false);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const [telegramLink, setTelegramLink] = useState<string | null>(null);
 
   const telegramLoggedIn = telegramLoaded ? telegramUser !== null : null;
 
@@ -100,10 +101,22 @@ export default function Pricing() {
       .finally(() => setTelegramLoaded(true));
   };
 
+  const refreshSubscription = () => {
+    fetch("/api/subscription/status")
+      .then((res) => res.json())
+      .then((data) => setTelegramLink(data.kind === "ready" ? data.telegramLink : null))
+      .catch(() => setTelegramLink(null));
+  };
+
   useEffect(() => {
     refreshTelegramLoggedIn();
+    refreshSubscription();
     window.addEventListener("tg-auth", refreshTelegramLoggedIn);
-    return () => window.removeEventListener("tg-auth", refreshTelegramLoggedIn);
+    window.addEventListener("tg-auth", refreshSubscription);
+    return () => {
+      window.removeEventListener("tg-auth", refreshTelegramLoggedIn);
+      window.removeEventListener("tg-auth", refreshSubscription);
+    };
   }, []);
 
   async function handleLogout() {
@@ -280,6 +293,17 @@ export default function Pricing() {
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
+            {telegramLink && (
+              <a
+                href={telegramLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-gold to-gold-light text-black font-bold text-sm hover:opacity-90 transition-all duration-300"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Entrar no Grupo VIP
+              </a>
+            )}
           </motion.div>
         )}
         {telegramLoggedIn === false && !noticeDismissed && (
