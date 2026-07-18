@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Script from "next/script";
 import { motion } from "framer-motion";
-import { ExternalLink, Loader2, CheckCircle2, LogOut } from "lucide-react";
+import { ExternalLink, Loader2, CheckCircle2, LogOut, AlertTriangle } from "lucide-react";
 
 type Status =
   | { kind: "loading" }
@@ -191,31 +191,38 @@ export default function TelegramGate() {
       className="max-w-xl mx-auto mb-12 rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center"
     >
       {user ? (
-        <div className="flex items-center justify-center gap-3">
-          {user.photo_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.photo_url}
-              alt={user.first_name}
-              referrerPolicy="no-referrer"
-              className="w-11 h-11 rounded-full object-cover border border-white/10"
-            />
-          )}
-          <div className="text-left">
-            <p className="text-white font-semibold leading-tight">{user.first_name}</p>
-            {user.username && (
-              <p className="text-zinc-400 text-sm leading-tight">@{user.username}</p>
+        <>
+          <div className="flex items-center justify-center gap-3">
+            {user.photo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.photo_url}
+                alt={user.first_name}
+                referrerPolicy="no-referrer"
+                className="w-11 h-11 rounded-full object-cover border border-white/10"
+              />
             )}
+            <div className="text-left">
+              <p className="text-white font-semibold leading-tight">{user.first_name}</p>
+              {user.username && (
+                <p className="text-zinc-400 text-sm leading-tight">@{user.username}</p>
+              )}
+            </div>
+            <button
+              onClick={logout}
+              className="ml-1 w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label="Terminar sessão"
+              title="Terminar sessão"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={logout}
-            className="ml-1 w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            aria-label="Terminar sessão"
-            title="Terminar sessão"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+          {/* Logged in but no active subscription (status kind === "none"). */}
+          <div className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            Sem subscrição ativa
+          </div>
+        </>
       ) : (
         <>
           <h3 className="text-lg font-bold text-white mb-2">Entra com o Telegram</h3>

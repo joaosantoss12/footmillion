@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 import { supabaseSelect } from "@/lib/supabase";
 import { LINK_TTL_DAYS } from "@/lib/inviteLink";
+import { claimGrantedVip } from "@/lib/legacyClaim";
 
 type Subscription = {
   id: string;
@@ -31,6 +32,17 @@ export async function GET(req: NextRequest) {
 
     const sub = subs[0];
     if (!sub) {
+      // No subscription — but an admin may have granted VIP by @username via the
+      // bot. Now that we know the id, turn that grant into a real subscription.
+      const granted = await claimGrantedVip(session);
+      if (granted) {
+        return NextResponse.json({
+          kind: "ready",
+          plan: granted.plan,
+          expiresAt: granted.expiresAt,
+          telegramLink: granted.telegramLink,
+        });
+      }
       return NextResponse.json({ kind: "none" });
     }
 

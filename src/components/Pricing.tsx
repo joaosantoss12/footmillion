@@ -88,6 +88,7 @@ export default function Pricing() {
   const [telegramLoaded, setTelegramLoaded] = useState(false);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const [telegramLink, setTelegramLink] = useState<string | null>(null);
+  const [subKind, setSubKind] = useState<string | null>(null);
 
   const telegramLoggedIn = telegramLoaded ? telegramUser !== null : null;
 
@@ -102,9 +103,18 @@ export default function Pricing() {
   const refreshSubscription = () => {
     fetch("/api/subscription/status")
       .then((res) => res.json())
-      .then((data) => setTelegramLink(data.kind === "ready" ? data.telegramLink : null))
-      .catch(() => setTelegramLink(null));
+      .then((data) => {
+        setSubKind(data.kind ?? null);
+        setTelegramLink(data.kind === "ready" ? data.telegramLink : null);
+      })
+      .catch(() => {
+        setSubKind(null);
+        setTelegramLink(null);
+      });
   };
+
+  // Logged in but the site found no active subscription.
+  const noActiveSub = telegramLoggedIn === true && subKind === "none";
 
   useEffect(() => {
     refreshTelegramLoggedIn();
@@ -225,6 +235,13 @@ export default function Pricing() {
                 </div>
               )}
 
+              {noActiveSub && (
+                <div className="flex items-center gap-2 mb-5 px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  Sem subscrição ativa
+                </div>
+              )}
+
               <button
                 onClick={() => handleCheckout(pendingPlan.id)}
                 disabled={loadingPlan !== null || telegramLoggedIn !== true}
@@ -303,6 +320,12 @@ export default function Pricing() {
                 <ExternalLink className="w-4 h-4" />
                 Entrar no Grupo VIP
               </a>
+            )}
+            {noActiveSub && (
+              <div className="mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                Sem subscrição ativa
+              </div>
             )}
           </motion.div>
         )}
