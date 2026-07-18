@@ -39,6 +39,7 @@ const PLAN_LABELS: Record<string, string> = {
 export default function TelegramGate() {
   const [status, setStatus] = useState<Status>({ kind: "loading" });
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [generating, setGenerating] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(async () => {
@@ -57,6 +58,24 @@ export default function TelegramGate() {
     await fetch("/api/telegram/logout", { method: "POST" });
     refresh();
     window.dispatchEvent(new Event("tg-auth"));
+  }, [refresh]);
+
+  // Fallback: mint a fresh single-use link when the subscription has none or
+  // its link has expired. The server reuses a still-valid link if one exists.
+  const generateLink = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/subscription/link", { method: "POST" });
+      if (res.ok) {
+        await refresh();
+      } else {
+        alert("Não foi possível gerar o link. Tenta novamente ou contacta o suporte.");
+      }
+    } catch {
+      alert("Erro de ligação. Tenta novamente.");
+    } finally {
+      setGenerating(false);
+    }
   }, [refresh]);
 
   useEffect(() => {
@@ -146,6 +165,21 @@ export default function TelegramGate() {
         <p className="text-zinc-400 text-sm">
           O pagamento foi confirmado. O link de acesso ao grupo aparece aqui em instantes.
         </p>
+        <button
+          onClick={generateLink}
+          disabled={generating}
+          className="mt-6 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition-all duration-300 disabled:opacity-60 disabled:cursor-wait"
+        >
+          {generating ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <ExternalLink className="w-4 h-4" />
+          )}
+          {generating ? "A gerar..." : "Gerar link de acesso"}
+        </button>
+        <p className="text-zinc-600 text-xs mt-3">
+          Já pagaste e o link não aparece? Gera-o aqui (válido uma vez).
+        </p>
       </motion.div>
     );
   }
@@ -186,8 +220,9 @@ export default function TelegramGate() {
         <>
           <h3 className="text-lg font-bold text-white mb-2">Entra com o Telegram</h3>
           <p className="text-zinc-400 text-sm mb-5">
-            Faz login antes de pagar e o link de acesso ao grupo aparece diretamente
-            aqui, sem precisares de abrir o Telegram.
+            É <strong className="text-amber-300">obrigatório</strong> iniciar sessão com o
+            Telegram para comprar. Depois do pagamento, o link de acesso ao grupo aparece
+            aqui — sem precisares de abrir o Telegram.
           </p>
           <Script
             src="https://oauth.telegram.org/js/telegram-login.js?5"

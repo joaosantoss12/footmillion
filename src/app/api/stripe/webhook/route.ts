@@ -1,64 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseSelect, supabaseInsert, supabaseUpdate } from "@/lib/supabase";
+import { createChannelInviteLink } from "@/lib/inviteLink";
 
-// Mirrors config.py's PLANS in the bot repo.
-const PLAN_DAYS: Record<string, number> = {
-  monthly: 30,
-  quarterly: 90,
-  yearly: 365,
+// Mirrors config.py in the bot repo: the real subscription length is a number
+// of calendar months.
+const PLAN_MONTHS: Record<string, number> = {
+  monthly: 1,
+  quarterly: 3,
+  yearly: 12,
 };
 
 type SubscriptionRow = { id: string; expires_at: string; invite_link_id: string | null };
 
 /**
- * Writes the paid-for subscription so the site can show "access ready" on a
- * later visit. `invite_link_id` is left null here — the bot fills it in once
- * it generates the personal invite link for this telegram_user_id.
+ * Add calendar months in UTC, keeping the same day-of-month and clamping when
+ * the target month is shorter (31 Jan -> 28/29 Feb). Mirrors config.py's
+ * plan_expiry so the site and the bot never disagree on an expiry date.
  */
-async function upsertTelegramSubscription(
-  telegramUserId: string,
-  telegramUsername: string | undefined,
-  telegramName: string,
-  planId: string
-) {
-  const days = PLAN_DAYS[planId];
-  if (!days) throw new Error(`Unknown planId for subscription upsert: ${planId}`);
+function addCalendarMonths(start: Date, months: number): Date {
+  const d = new Date(start);
+  const day = d.getUTCDate();
+  d.setUTCDate(1); // avoid roll-over while shifting the month
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, lastDay));
+  return d;
+}
 
-  const existing = await supabaseSelect<SubscriptionRow>("subscriptions", {
-    telegram_user_id: `eq.${telegramUserId}`,
-    active: "eq.true",
-    select: "id,expires_at,invite_link_id",
-    order: "expires_at.desc",
-    limit: "1",
-  });
-
+/**
+ * Extend a still-valid subscription, or start fresh. Mirrors the bot's
+ * _handle_join: the new period stacks on whatever time is left, so renewing
+ * early never loses days.
+ */
+function computeExpiry(current: SubscriptionRow | undefined, planId: string): Date {
   const now = new Date();
-  const current = existing[0];
-
-  if (current) {
-    const base = new Date(
-      Math.max(new Date(current.expires_at).getTime(), now.getTime())
-    );
-    const expiresAt = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
-    await supabaseUpdate(
-      "subscriptions",
-      { id: `eq.${current.id}` },
-      { plan: planId, expires_at: expiresAt.toISOString(), renewal_notified_at: null }
-    );
-    return;
-  }
-
-  const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-  await supabaseInsert("subscriptions", {
-    telegram_user_id: Number(telegramUserId),
-    telegram_username: telegramUsername ?? null,
-    telegram_name: telegramName,
-    plan: planId,
-    expires_at: expiresAt.toISOString(),
-    invite_link_id: null,
-    active: true,
-  });
+  const base = current
+    ? new Date(Math.max(new Date(current.expires_at).getTime(), now.getTime()))
+    : now;
+  return addCalendarMonths(base, PLAN_MONTHS[planId] ?? 0);
 }
 
 export async function POST(req: NextRequest) {
@@ -86,37 +66,78 @@ export async function POST(req: NextRequest) {
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
-
-  // O Stripe repete o webhook até receber 2xx; a flag impede um upsert em duplicado.
-  if (session.metadata?.processed === "true") {
-    return NextResponse.json({ received: true, skipped: "already processed" });
-  }
-
   const telegramUserId = session.metadata?.telegram_user_id;
   const planId = session.metadata?.planId;
 
-  // Sem login com Telegram: o bot já grava o invite_link a partir do seu
-  // próprio webhook; a LP não tem mais nada a fazer nesta sessão.
-  if (!telegramUserId || !planId) {
+  // Sem login com Telegram: o webhook do bot trata do link a partir da sua
+  // própria sessão; a LP não tem mais nada a fazer aqui.
+  if (!telegramUserId || !planId || !PLAN_MONTHS[planId]) {
     return NextResponse.json({ received: true, skipped: "no telegram session" });
   }
 
   try {
-    await upsertTelegramSubscription(
-      telegramUserId,
-      session.metadata?.telegram_username,
-      session.metadata?.telegram_name ?? "",
-      planId
-    );
+    // Idempotência à prova de reenvio: se já existe um invite_link para esta
+    // sessão, este evento já foi totalmente processado. (O Stripe reenvia o
+    // evento original, cuja metadata não reflete flags que escrevêssemos depois,
+    // por isso a marca de "processado" vive na base de dados, não na sessão.)
+    const already = await supabaseSelect<{ id: string }>("invite_links", {
+      stripe_session_id: `eq.${session.id}`,
+      select: "id",
+      limit: "1",
+    });
+    if (already.length) {
+      return NextResponse.json({ received: true, skipped: "already processed" });
+    }
 
-    await stripe.checkout.sessions.update(session.id, {
-      metadata: { ...session.metadata, processed: "true" },
+    const existing = await supabaseSelect<SubscriptionRow>("subscriptions", {
+      telegram_user_id: `eq.${telegramUserId}`,
+      active: "eq.true",
+      select: "id,expires_at,invite_link_id",
+      order: "expires_at.desc",
+      limit: "1",
+    });
+    const current = existing[0];
+    const expiresAt = computeExpiry(current, planId);
+    const email = session.customer_details?.email ?? "";
+
+    // Generate + record the link first: its invite_links row is the idempotency
+    // marker, so a later resend short-circuits above instead of re-stacking.
+    const { id: inviteLinkId } = await createChannelInviteLink({
+      planId,
+      subscriptionExpiresAt: expiresAt.toISOString(),
+      sessionId: session.id,
+      email,
     });
 
-    console.log(`Subscription upserted for telegram_user_id ${telegramUserId} (${planId})`);
+    if (current) {
+      await supabaseUpdate(
+        "subscriptions",
+        { id: `eq.${current.id}` },
+        {
+          plan: planId,
+          expires_at: expiresAt.toISOString(),
+          invite_link_id: inviteLinkId,
+          renewal_notified_at: null,
+        }
+      );
+    } else {
+      await supabaseInsert("subscriptions", {
+        telegram_user_id: Number(telegramUserId),
+        telegram_username: session.metadata?.telegram_username ?? null,
+        telegram_name: session.metadata?.telegram_name ?? "",
+        plan: planId,
+        expires_at: expiresAt.toISOString(),
+        invite_link_id: inviteLinkId,
+        active: true,
+      });
+    }
+
+    console.log(
+      `Subscription + link provisioned for telegram_user_id ${telegramUserId} (${planId})`
+    );
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error("Failed to record telegram-linked subscription:", err);
-    return NextResponse.json({ error: "Subscription upsert failed" }, { status: 500 });
+    console.error("Failed to provision telegram-linked subscription:", err);
+    return NextResponse.json({ error: "Provisioning failed" }, { status: 500 });
   }
 }

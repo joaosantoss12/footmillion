@@ -2,7 +2,7 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import { Check, Crown, Zap, Star, ArrowRight, X, Mail, Link, AlertTriangle, Send, LogOut, ExternalLink } from "lucide-react";
+import { Check, Crown, Zap, Star, ArrowRight, X, AlertTriangle, LogOut, ExternalLink } from "lucide-react";
 import TelegramGate from "./TelegramGate";
 
 type TelegramUser = {
@@ -90,8 +90,6 @@ export default function Pricing() {
   const [telegramLink, setTelegramLink] = useState<string | null>(null);
 
   const telegramLoggedIn = telegramLoaded ? telegramUser !== null : null;
-
-  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
 
   const refreshTelegramLoggedIn = () => {
     fetch("/api/telegram/me")
@@ -190,8 +188,8 @@ export default function Pricing() {
 
               {telegramLoggedIn === false && (
                 <div className="flex flex-col items-center gap-2 mb-5 pb-5 border-b border-white/10">
-                  <p className="text-xs text-zinc-400">
-                    Entra com o Telegram para receberes o link diretamente aqui após o pagamento
+                  <p className="text-xs text-amber-300 font-medium text-center">
+                    É <strong>obrigatório</strong> iniciar sessão com o Telegram para comprar.
                   </p>
                   <button className="tg-auth-button" data-style="shine">
                     Entrar com Telegram
@@ -229,8 +227,8 @@ export default function Pricing() {
 
               <button
                 onClick={() => handleCheckout(pendingPlan.id)}
-                disabled={loadingPlan !== null}
-                className="w-full py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 bg-gradient-to-r from-gold to-gold-light text-black hover:opacity-90 transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-lg shadow-gold/20"
+                disabled={loadingPlan !== null || telegramLoggedIn !== true}
+                className="w-full py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 bg-gradient-to-r from-gold to-gold-light text-black hover:opacity-90 transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-gold/20"
               >
                 {loadingPlan === pendingPlan.id ? (
                   <>
@@ -240,6 +238,8 @@ export default function Pricing() {
                     </svg>
                     A processar...
                   </>
+                ) : telegramLoggedIn !== true ? (
+                  "Inicia sessão para continuar"
                 ) : (
                   <>
                     Confirmar e Pagar
@@ -324,10 +324,8 @@ export default function Pricing() {
             <div className="flex items-start gap-3 pr-6 text-sm text-amber-300">
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>
-                Inicia sessão com o Telegram para receber aqui o link.<br></br>Se pagares sem login, envia{" "}
-                <strong>/start</strong> para{" "}
-                <strong>@{botUsername}</strong> no
-                Telegram depois do pagamento para receberes o link do grupo.
+                É <strong>obrigatório</strong> iniciar sessão com o Telegram para comprar.
+                Depois de pagares, voltas aqui para receberes o link do grupo.
               </span>
             </div>
             <div className="flex items-center justify-center mt-3 pl-7">
@@ -335,15 +333,6 @@ export default function Pricing() {
                 Entrar com Telegram
               </button>
             </div>
-            <a
-              href={`https://t.me/${botUsername}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 ml-7 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs font-medium text-amber-300 hover:bg-amber-500/20 transition-colors"
-            >
-              <Send className="w-3.5 h-3.5" />
-              Abrir chat com o bot
-            </a>
           </motion.div>
         )}
       </AnimatePresence>

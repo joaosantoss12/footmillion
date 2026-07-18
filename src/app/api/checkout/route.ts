@@ -35,25 +35,28 @@ export async function POST(req: NextRequest) {
 
     const plan = PLANS[planId];
 
+    // Telegram login is mandatory — nobody buys without it. This is the real
+    // gate; the UI also blocks the button, but the purchase itself is refused
+    // here so an unauthenticated request can never create a session.
     const tgSession = verifySession(req.cookies.get(SESSION_COOKIE)?.value);
+    if (!tgSession) {
+      return NextResponse.json(
+        { error: "Tens de iniciar sessão com o Telegram antes de comprar." },
+        { status: 401 }
+      );
+    }
 
     const metadata: Record<string, string> = {
       planId,
       planName: plan.name,
       telegramLink: plan.telegramLink,
+      telegram_user_id: String(tgSession.id),
+      telegram_name: tgSession.first_name,
     };
-    if (tgSession) {
-      metadata.telegram_user_id = String(tgSession.id);
-      if (tgSession.username) metadata.telegram_username = tgSession.username;
-      metadata.telegram_name = tgSession.first_name;
-    }
+    if (tgSession.username) metadata.telegram_username = tgSession.username;
 
-    // Logged-in buyers return to the homepage, which shows their invite link
-    // once ready. Without a known telegram_user_id we fall back to the bot's
-    // /join deep-link flow, exactly as before.
-    const successUrl = tgSession
-      ? `${process.env.NEXT_PUBLIC_URL}/?paid=1`
-      : `https://joaosantos.pythonanywhere.com/join/{CHECKOUT_SESSION_ID}`;
+    // Always return to the homepage, which shows their invite link once ready.
+    const successUrl = `${process.env.NEXT_PUBLIC_URL}/?paid=1`;
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",

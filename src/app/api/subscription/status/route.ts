@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession, SESSION_COOKIE } from "@/lib/session";
 import { supabaseSelect } from "@/lib/supabase";
+import { LINK_TTL_DAYS } from "@/lib/inviteLink";
 
 type Subscription = {
   id: string;
@@ -9,7 +10,9 @@ type Subscription = {
   invite_link_id: string | null;
 };
 
-type InviteLink = { link: string };
+type InviteLink = { link: string; created_at: string; used_at: string | null };
+
+const LINK_TTL_MS = LINK_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 export async function GET(req: NextRequest) {
   const session = verifySession(req.cookies.get(SESSION_COOKIE)?.value);
@@ -41,11 +44,19 @@ export async function GET(req: NextRequest) {
 
     const links = await supabaseSelect<InviteLink>("invite_links", {
       id: `eq.${sub.invite_link_id}`,
-      select: "link",
+      select: "link,created_at,used_at",
     });
 
-    const link = links[0]?.link;
-    if (!link) {
+    const rec = links[0];
+    // A usable link is one already consumed (they're in the channel — reopening
+    // it just returns them) or still within its single-use window. An unused,
+    // expired link is treated as missing so the UI offers to regenerate.
+    const usable =
+      rec &&
+      (rec.used_at !== null ||
+        Date.now() - new Date(rec.created_at).getTime() < LINK_TTL_MS);
+
+    if (!usable) {
       return NextResponse.json({
         kind: "pending",
         plan: sub.plan,
@@ -57,7 +68,7 @@ export async function GET(req: NextRequest) {
       kind: "ready",
       plan: sub.plan,
       expiresAt: sub.expires_at,
-      telegramLink: link,
+      telegramLink: rec.link,
     });
   } catch (err) {
     console.error("subscription/status failed:", err);
