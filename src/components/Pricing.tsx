@@ -2,7 +2,7 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
-import { Check, Crown, Zap, Star, ArrowRight, X, AlertTriangle, LogOut, ExternalLink } from "lucide-react";
+import { Crown, Zap, Star, ArrowRight, X, AlertTriangle, LogOut, ExternalLink } from "lucide-react";
 import TelegramGate from "./TelegramGate";
 
 type TelegramUser = {
@@ -19,13 +19,6 @@ const plans = [
     originalPrice: "39.99",
     period: "pagamento único",
     description: "Perfeito para experimentar",
-    features: [
-      "Acesso total ao grupo VIP",
-      "Palpites diários premium",
-      "Análises pré-jogo",
-      "Suporte por mensagem",
-      "Gestão de banca básica",
-    ],
     icon: Zap,
     popular: false,
     gradient: "from-zinc-800 to-zinc-900",
@@ -40,14 +33,6 @@ const plans = [
     period: "pagamento único",
     description: "O mais popular",
     badge: "⚡ MAIS POPULAR",
-    features: [
-      "Tudo do plano 1 Mês",
-      "Palpites live em tempo real",
-      "Análises ao vivo",
-      "Suporte prioritário 24/7",
-      "Estratégias avançadas",
-      "Grupo de discussão exclusivo",
-    ],
     icon: Crown,
     popular: true,
     gradient: "from-gold/10 to-gold/5",
@@ -62,15 +47,6 @@ const plans = [
     period: "pagamento único",
     description: "O melhor investimento",
     badge: "👑 MELHOR VALOR",
-    features: [
-      "Tudo do plano 3 Meses",
-      "Acesso durante 1 ano completo",
-      "Mentoria personalizada",
-      "Acesso antecipado a novidades",
-      "Badge exclusiva de fundador",
-      "Canal VIP dentro do VIP",
-      "Bónus: curso de apostas",
-    ],
     icon: Star,
     popular: false,
     gradient: "from-green-accent/5 to-green-accent/5",
@@ -456,24 +432,11 @@ export default function Pricing() {
                   <p className="text-zinc-500 text-xs mt-1">{plan.period}</p>
                 </div>
 
-                {/* Features */}
-                <ul className="space-y-3 mb-8 flex-grow">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-3">
-                      <Check
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-gold" : "text-green-accent"
-                          }`}
-                      />
-                      <span className="text-zinc-300 text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
                 {/* CTA Button */}
                 <button
                   onClick={() => setPendingPlanId(plan.id)}
                   disabled={loadingPlan !== null}
-                  className={`w-full py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-wait ${plan.popular
+                  className={`w-full mt-auto py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer disabled:opacity-60 disabled:cursor-wait ${plan.popular
                     ? "bg-gradient-to-r from-gold to-gold-light text-black hover:opacity-90 shadow-lg shadow-gold/20"
                     : "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20"
                     }`}
